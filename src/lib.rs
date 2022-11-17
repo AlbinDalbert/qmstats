@@ -1,7 +1,50 @@
-use std::{collections::HashMap, thread, time};
+use std::{collections::HashMap, thread, time::{self, Duration}, sync::mpsc::{Sender, SyncSender}};
+use std::result::Result::Ok;
 use wmi::{WMIConnection, COMLibrary,Variant};
-use anyhow;
+use anyhow::{self};
 mod test;
+
+#[derive(Debug, PartialEq)]
+pub enum Measurement {
+    Temperature(f64),
+    Memory(f64),
+    TotalMemory(f64),
+    CpuUtil(f64),
+    NaN,
+}
+
+
+pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
+
+    thread::spawn(move || {
+
+        let wmi: WMIConnection = match init_wmi_connection() {
+            Ok(wmi) => wmi,
+            Err(_) => panic!("WMI failed"),
+        };
+
+        tx.send(get_total_memory(&wmi)).unwrap();
+
+        loop {
+
+            let results: Vec<Measurement> = vec![
+                get_temp(&wmi),
+                get_available_memory(&wmi),
+                get_cpu_util(&wmi),
+            ];
+
+            for res in results {
+                if res != Measurement::NaN {
+                    tx.send(res).unwrap();
+                }
+            }
+
+            thread::sleep(sleep_dur);
+        }
+
+    });
+
+}
 
 
 // initialize the WMI connection
@@ -15,7 +58,7 @@ pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
 }
 
 // get the temperature of the machine, returns in Celsius.
-pub fn get_temp(wmi: &WMIConnection) -> f64 {
+pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
@@ -29,12 +72,13 @@ pub fn get_temp(wmi: &WMIConnection) -> f64 {
         Variant::UI4(val) => *val as f64,
         _ => -1.0,
     };
-    kelvin - 273.0
+    
+    Measurement::Temperature(kelvin - 273.0)
 }
 
 // returns cpu utilization
 // return -1 on error
-pub fn get_cpu_util(wmi: &WMIConnection) -> f64 {
+pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
         "SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfOS_Processor",
@@ -48,12 +92,12 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> f64 {
         _ => -1.0,
     };
     
-    percent
+    Measurement::CpuUtil(percent)
 }
 
 // get available memory (ram) returns the volume in bytes
 
-pub fn get_available_memory(wmi: &WMIConnection) -> f64 {
+pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
@@ -65,15 +109,15 @@ pub fn get_available_memory(wmi: &WMIConnection) -> f64 {
 
     let bytes: f64 = match data.get("AvailableBytes").unwrap() {
         Variant::UI8(val) => *val as f64,
-        _ => 0.0,
+        _ => -1.0,
     };
 
-    bytes
+    Measurement::Memory(bytes)
 }
 
 // get the total amount of physical memory, returns in bytes
 
-pub fn get_total_memory(wmi: &WMIConnection) -> f64 {
+pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
@@ -88,5 +132,5 @@ pub fn get_total_memory(wmi: &WMIConnection) -> f64 {
         _ => 0.0,
     };
 
-    bytes
+    Measurement::TotalMemory(bytes)
 }

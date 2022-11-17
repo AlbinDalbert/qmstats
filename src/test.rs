@@ -2,32 +2,28 @@ use crate::*;
 
 #[cfg(test)]
 mod tests {
+    use std::sync::mpsc;
+
     use super::*;
 
     // executing init_wmi_connection() multiple times on the same thread causes the program to crash.
     // For this reason running all tests at once will not work. testing_all() should be used instead.
 
     #[test]
-    fn testing_all() {
+    fn measurement_thread() {
 
-        let handle = thread::spawn(|| {
-            let wmi = match init_wmi_connection() {
-                Ok(wmi) => wmi,
-                Err(_) => panic!("WMI failed"),
-            };
+        let (tx, rx) = mpsc::channel::<Measurement>();
+        let sleep_dur = Duration::new(1, 0);
 
-            let temp = get_temp(&wmi);
-            let memory = get_available_memory(&wmi);
-            let cpu = get_cpu_util(&wmi);
-            let total_memory = get_total_memory(&wmi);
+        init_measurement_thread(tx, sleep_dur);
 
-            println!(" {} C\n {:.1} MB / {:.1} MB\n {} %\n", temp, memory, total_memory, cpu);
-        });
-        match handle.join() {
-            Ok(_) => assert!(true),
-            Err(_) => assert!(false)
-        };
-        
+        loop {
+            
+            let res = rx.recv().unwrap();
+
+            println!("{res:?}");
+
+        }
     }
 
     #[test]
