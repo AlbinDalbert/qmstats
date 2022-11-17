@@ -3,4 +3,5 @@ QMstats (quick machine stats) is a user friendly library to interact with wmi. T
 
 ## Usage
 To add this crate to you project, simply add the following line to your `Cargo.toml`
-``` qmstats = { git = }```
+
+``` qmstats = { git = "https://github.com/AlbinDalbert/qmstats.git" }```
