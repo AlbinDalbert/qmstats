@@ -143,3 +143,7 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 
     Measurement::TotalMemory(kib)
 }
+
+pub fn KiB_to_GiB(kib: f64) -> f64{
+    kib / (1024.0 * 1024.0)
+}
