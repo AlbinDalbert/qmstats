@@ -7,6 +7,7 @@ mod test;
 #[derive(Debug, PartialEq)]
 pub enum Measurement {
     Temperature(f64),
+    FatalTemp(f64),
     Memory(f64),
     TotalMemory(f64),
     CpuUtil(f64),
@@ -142,6 +143,23 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
     let kib = bytes / 1024.0;
 
     Measurement::TotalMemory(kib)
+}
+
+pub fn get_max_temp(wmi: &WMIConnection) -> Measurement {
+    let results: Vec<HashMap<String, Variant>> = wmi
+    .raw_query(
+        "SELECT UpperThresholdFatal FROM Win32_TemperatureProbe",
+    )
+    .unwrap();
+
+    let data = results.get(0).unwrap();
+
+    let kelvin: f64 = match data.get("UpperThresholdFatal").unwrap() {
+        Variant::UI4(val) => *val as f64,
+        _ => -1.0,
+    };
+    
+    Measurement::Temperature(kelvin - 273.0)
 }
 
 pub fn KiB_to_GiB(kib: f64) -> f64{
