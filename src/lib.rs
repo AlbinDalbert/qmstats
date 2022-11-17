@@ -13,11 +13,11 @@ pub enum Measurement {
     NaN,
 }
 
-pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
+pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, assume: bool){
 
     thread::Builder::new().name("WMI Measurement Thread".to_string()).spawn(move || {
 
-        let wmi: WMIConnection = match init_wmi_connection() {
+        let wmi: WMIConnection = match init_wmi_connection(assume) {
             Ok(wmi) => wmi,
             Err(_) => panic!("WMI failed"),
         };
@@ -47,9 +47,14 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
 
 
 // initialize the WMI connection
-pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
+pub fn init_wmi_connection(assume: bool) -> Result<WMIConnection, anyhow::Error>{
     unsafe {
-        let com_lib = COMLibrary::assume_initialized();
+        let com_lib: COMLibrary;
+        if assume {
+            com_lib = COMLibrary::assume_initialized();
+        } else {
+            com_lib = COMLibrary::new().unwrap();
+        }
 
         let wmi_con = WMIConnection::new(com_lib.into())?;
 
