@@ -126,21 +126,15 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
 
 pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 
-    // let results: Vec<HashMap<String, Variant>> = wmi
-    // .raw_query(
-    //     "SELECT TotalPhysicalMemory FROM Win32_ComputerSystem",
-    // )
-    // .unwrap();
-
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
-        "SELECT TotalVirtualMemorySize FROM Win32_OperatingSystem",
+        "SELECT TotalPhysicalMemory FROM Win32_ComputerSystem",
     )
     .unwrap();
 
     let data = results.get(0).unwrap();
 
-    let bytes: f64 = match data.get("TotalVirtualMemorySize").unwrap() {
+    let bytes: f64 = match data.get("TotalPhysicalMemory").unwrap() {
         Variant::UI8(val) => *val as f64,
         _ => 0.0,
     };
