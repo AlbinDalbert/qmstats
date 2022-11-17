@@ -139,5 +139,7 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
         _ => 0.0,
     };
 
-    Measurement::TotalMemory(bytes)
+    let kib = bytes / 1024.0;
+
+    Measurement::TotalMemory(kib)
 }
