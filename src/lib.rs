@@ -31,7 +31,7 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 get_temp(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
-                get_max_temp(&wmi),
+                get_battery(&wmi),
             ];
 
             for res in results {
@@ -146,21 +146,21 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
     Measurement::TotalMemory(kib)
 }
 
-pub fn get_max_temp(wmi: &WMIConnection) -> Measurement {
+pub fn get_battery(wmi: &WMIConnection) -> Measurement {
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
-        "SELECT UpperThresholdFatal FROM Win32_TemperatureProbe",
+        "SELECT BatteryStatus FROM Win32_Battery",
     )
     .unwrap();
 
     let data = results.get(0).unwrap();
 
-    let kelvin: f64 = match data.get("UpperThresholdFatal").unwrap() {
+    let percent: f64 = match data.get("BatteryStatus").unwrap() {
         Variant::UI4(val) => *val as f64,
         _ => -1.0,
     };
     
-    Measurement::FatalTemp(kelvin - 273.0)
+    Measurement::FatalTemp(percent)
 }
 
 pub fn KiB_to_GiB(kib: f64) -> f64{
