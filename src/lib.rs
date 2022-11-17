@@ -117,7 +117,9 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
         _ => -1.0,
     };
 
-    Measurement::Memory(bytes)
+    let kib = bytes / 1024.0;
+
+    Measurement::Memory(kib)
 }
 
 // get the total amount of physical memory, returns in bytes
