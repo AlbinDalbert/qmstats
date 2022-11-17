@@ -15,7 +15,7 @@ pub enum Measurement {
 
 pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
 
-    thread::Builder::new().name("WMI Measurment Thread".to_string()).spawn(move || {
+    thread::Builder::new().name("WMI Measurement Thread".to_string()).spawn(move || {
 
         let wmi: WMIConnection = match init_wmi_connection() {
             Ok(wmi) => wmi,
