@@ -159,7 +159,7 @@ pub fn get_max_temp(wmi: &WMIConnection) -> Measurement {
         _ => -1.0,
     };
     
-    Measurement::Temperature(kelvin - 273.0)
+    Measurement::FatalTemp(kelvin - 273.0)
 }
 
 pub fn KiB_to_GiB(kib: f64) -> f64{
