@@ -13,10 +13,9 @@ pub enum Measurement {
     NaN,
 }
 
-
 pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
 
-    thread::spawn(move || {
+    thread::Builder::new().name("WMI Measurment Thread".to_string()).spawn(move || {
 
         let wmi: WMIConnection = match init_wmi_connection() {
             Ok(wmi) => wmi,
@@ -42,7 +41,7 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
             thread::sleep(sleep_dur);
         }
 
-    });
+    }).unwrap();
 
 }
 
