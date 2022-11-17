@@ -48,12 +48,13 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration){
 
 // initialize the WMI connection
 pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
-    
-    let com_lib = COMLibrary::new()?;
+    unsafe {
+        let com_lib = COMLibrary::assume_initialized();
 
-    let wmi_con = WMIConnection::new(com_lib.into())?;
+        let wmi_con = WMIConnection::new(com_lib.into())?;
 
-    Ok(wmi_con)
+        Ok(wmi_con)
+    }
 }
 
 // get the temperature of the machine, returns in Celsius.
