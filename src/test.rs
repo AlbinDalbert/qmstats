@@ -15,13 +15,13 @@ mod tests {
         let (tx, rx) = mpsc::channel::<Measurement>();
         let sleep_dur = Duration::new(1, 0);
 
-        init_measurement_thread(tx, sleep_dur, true);
+        init_measurement_thread(tx, sleep_dur, false);
 
         loop {
             
             let res = rx.recv().unwrap();
 
-            println!("{res:?}");
+            println!("{res:?}\n");
 
         }
     }
@@ -31,7 +31,7 @@ mod tests {
         
         let handle = thread::spawn(|| {
         
-            match init_wmi_connection(true) {
+            match init_wmi_connection(false) {
                 Ok(_) => assert!(true),
                 Err(_) => assert!(false),
             };
@@ -49,7 +49,7 @@ mod tests {
 
         let handle = thread::spawn(|| {
             
-            let wmi = match init_wmi_connection(true) {
+            let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };
@@ -68,7 +68,7 @@ mod tests {
 
         let handle = thread::spawn(|| {
             
-            let wmi = match init_wmi_connection(true) {
+            let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };
@@ -88,7 +88,7 @@ mod tests {
 
         let handle = thread::spawn(|| {
             
-            let wmi = match init_wmi_connection(true) {
+            let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };

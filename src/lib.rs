@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread, time::{self, Duration}, sync::mpsc::{Sender, SyncSender}};
+use std::{collections::HashMap, thread, time::Duration, sync::mpsc::Sender};
 use std::result::Result::Ok;
 use wmi::{WMIConnection, COMLibrary,Variant};
 use anyhow::{self};
@@ -6,13 +6,18 @@ mod test;
 
 #[derive(Debug, PartialEq)]
 pub enum Measurement {
-    Temperature(f64),
-    FatalTemp(f64),
+    Temperature(f64), 
     Memory(f64),
     TotalMemory(f64),
     CpuUtil(f64),
     NaN,
 }
+
+// initialize the measurement thread. This creates a new thread that runs in the background and 
+// send the measurements to 'tx', for each lap is sleeps for 'sleep_dur'
+// last and most importantly, the bool 'assume' describes if we should initialize a new WMI connection, 
+// or if we are going to assume that a connection is already established. The reason for this is because 
+// many engines and framework already establish a connection and thus we might need to assume.
 
 pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, assume: bool){
 
@@ -31,7 +36,6 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 get_temp(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
-                get_battery(&wmi),
             ];
 
             for res in results {
@@ -49,6 +53,8 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
 
 
 // initialize the WMI connection
+// 'assume' decides if we are going to assume a wmi connection has already been made,
+// or if we are gonna create a new one.
 pub fn init_wmi_connection(assume: bool) -> Result<WMIConnection, anyhow::Error>{
     unsafe {
         let com_lib: COMLibrary;
@@ -65,6 +71,7 @@ pub fn init_wmi_connection(assume: bool) -> Result<WMIConnection, anyhow::Error>
 }
 
 // get the temperature of the machine, returns in Celsius.
+// return 'Measurement::NaN' on error
 pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
@@ -77,14 +84,14 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 
     let kelvin: f64 = match data.get("Temperature").unwrap() {
         Variant::UI4(val) => *val as f64,
-        _ => -1.0,
+        _ => return Measurement::NaN,
     };
     
     Measurement::Temperature(kelvin - 273.0)
 }
 
 // returns cpu utilization
-// return -1 on error
+// return 'Measurement::NaN' on error
 pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
@@ -96,14 +103,14 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
 
     let percent: f64 = match data.get("PercentProcessorTime").unwrap() {
         Variant::UI8(val) => *val as f64,
-        _ => -1.0,
+        _ => return Measurement::NaN,
     };
     
     Measurement::CpuUtil(percent)
 }
 
 // get available memory (ram) returns the volume in bytes
-
+// returns 'Measurement::NaN' on error
 pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
@@ -116,7 +123,7 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
 
     let bytes: f64 = match data.get("AvailableBytes").unwrap() {
         Variant::UI8(val) => *val as f64,
-        _ => -1.0,
+        _ => return Measurement::NaN,
     };
 
     let kib = bytes / 1024.0;
@@ -125,7 +132,7 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
 }
 
 // get the total amount of physical memory, returns in bytes
-
+// return 'Measurement::NaN' on error
 pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = wmi
@@ -138,7 +145,7 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 
     let bytes: f64 = match data.get("TotalPhysicalMemory").unwrap() {
         Variant::UI8(val) => *val as f64,
-        _ => 0.0,
+        _ => return Measurement::NaN,
     };
 
     let kib = bytes / 1024.0;
@@ -146,22 +153,6 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
     Measurement::TotalMemory(kib)
 }
 
-pub fn get_battery(wmi: &WMIConnection) -> Measurement {
-    let results: Vec<HashMap<String, Variant>> = wmi
-    .raw_query(
-        "SELECT BatteryStatus FROM Win32_Battery",
-    )
-    .unwrap();
-
-    let data = results.get(0).unwrap();
-
-    let percent: f64 = match data.get("BatteryStatus").unwrap() {
-        Variant::UI4(val) => *val as f64,
-        _ => -1.0,
-    };
-    
-    Measurement::FatalTemp(percent)
-}
 
 pub fn KiB_to_GiB(kib: f64) -> f64{
     kib / (1024.0 * 1024.0)
