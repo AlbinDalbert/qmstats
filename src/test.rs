@@ -1,9 +1,9 @@
 use crate::*;
+use std::sync::Once;
 
 #[cfg(test)]
 mod tests {
     use std::sync::mpsc;
-
     use super::*;
 
     // executing init_wmi_connection() multiple times on the same thread causes the program to crash.
@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn measurement_thread() {
-
+        
         let (tx, rx) = mpsc::channel::<Measurement>();
         let sleep_dur = Duration::new(1, 0);
 
@@ -28,6 +28,7 @@ mod tests {
 
     #[test]
     fn establish_wmi_connection() {
+
         
         let handle = thread::spawn(|| {
         
@@ -47,7 +48,9 @@ mod tests {
     #[test]
     fn check_temp() {
 
+        
         let handle = thread::spawn(|| {
+            
             
             let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,
@@ -66,7 +69,9 @@ mod tests {
     #[test]
     fn check_cpu_util() {
 
+        
         let handle = thread::spawn(|| {
+            
             
             let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,
@@ -86,7 +91,9 @@ mod tests {
     #[test]
     fn check_available_memory() {
 
+        
         let handle = thread::spawn(|| {
+            
             
             let wmi = match init_wmi_connection(false) {
                 Ok(wmi) => wmi,

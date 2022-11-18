@@ -10,6 +10,9 @@ pub enum Measurement {
     Memory(f64),
     TotalMemory(f64),
     CpuUtil(f64),
+    FrameRate(f64),
+    Network(String),
+    Test(String),
     NaN,
 }
 
@@ -36,11 +39,13 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 get_temp(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
+                // get_frame_rate(&wmi),
+                temporary_get(&wmi),
             ];
 
             for res in results {
                 if res != Measurement::NaN {
-                    tx.send(res).unwrap();
+                    tx.send(res);
                 }
             }
 
@@ -80,10 +85,14 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
     )
     .unwrap();
 
-    let data = results.get(0).unwrap();
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
 
-    let kelvin: f64 = match data.get("Temperature").unwrap() {
-        Variant::UI4(val) => *val as f64,
+    let mut kelvin: f64 = 0.0;
+    match data.get("Temperature") {
+        Some(Variant::UI4(val)) => kelvin = *val as f64,
         _ => return Measurement::NaN,
     };
     
@@ -95,14 +104,18 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
     let results: Vec<HashMap<String, Variant>> = wmi
     .raw_query(
-        "SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfOS_Processor",
+        "SELECT LoadPercentage FROM Win32_Processor",
     )
     .unwrap();
 
-    let data = results.get(0).unwrap();
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
 
-    let percent: f64 = match data.get("PercentProcessorTime").unwrap() {
-        Variant::UI8(val) => *val as f64,
+    let mut percent: f64 = 0.0;
+    match data.get("LoadPercentage") {
+        Some(Variant::UI2(val)) => percent = *val as f64,
         _ => return Measurement::NaN,
     };
     
@@ -119,10 +132,14 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
     )
     .unwrap();
 
-    let data = results.get(0).unwrap();
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
 
-    let bytes: f64 = match data.get("AvailableBytes").unwrap() {
-        Variant::UI8(val) => *val as f64,
+    let mut bytes: f64 = 0.0; 
+    match data.get("AvailableBytes") {
+        Some(Variant::UI8(val)) => bytes = *val as f64,
         _ => return Measurement::NaN,
     };
 
@@ -141,10 +158,15 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
     )
     .unwrap();
 
-    let data = results.get(0).unwrap();
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
 
-    let bytes: f64 = match data.get("TotalPhysicalMemory").unwrap() {
-        Variant::UI8(val) => *val as f64,
+    let mut bytes: f64 = 0.0;
+    
+    match data.get("TotalPhysicalMemory") {
+        Some(Variant::UI8(val)) => bytes = *val as f64,
         _ => return Measurement::NaN,
     };
 
@@ -154,6 +176,79 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
 }
 
 
+
+pub fn get_network_connection(wmi: &WMIConnection) -> Measurement {
+
+    let results: Vec<HashMap<String, Variant>> = wmi
+    .raw_query(
+        "SELECT Status FROM Win32_NetworkConnection",
+    )
+    .unwrap();
+
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
+
+    let mut status: String = "0.0".to_string();
+
+    match data.get("Status") {
+        Some(Variant::String(val)) => status = val.to_string(),
+        _ => return Measurement::NaN,
+    };
+
+    Measurement::Network(status)
+}
+
+
+
+pub fn get_frame_rate(wmi: &WMIConnection) -> Measurement {
+    let results: Vec<HashMap<String, Variant>> = wmi
+    .raw_query(
+        "SELECT CurrentRefreshRate FROM Win32_VideoController",
+    )
+    .unwrap();
+
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
+
+    let mut fr: f64 = 0.0;
+
+    match data.get("CurrentRefreshRate") {
+        Some(Variant::UI4(val)) => fr = *val as f64,
+        _ => return Measurement::NaN,
+    };
+
+    Measurement::FrameRate(fr)
+}
+
 pub fn KiB_to_GiB(kib: f64) -> f64{
     kib / (1024.0 * 1024.0)
+}
+
+
+// temporary used to test different queries
+fn temporary_get(wmi: &WMIConnection) -> Measurement {
+
+    let results: Vec<HashMap<String, Variant>> = wmi
+    .raw_query(
+        "SELECT Status FROM Win32_NetworkConnection",
+    )
+    .unwrap();
+
+    let data = match results.get(0) {
+        Some(x) => x,
+        _ => return Measurement::NaN,
+    };
+
+    let mut bytes: String = "0.0".to_string();
+
+    match data.get("Status") {
+        Some(Variant::String(val)) => bytes = val.to_string(),
+        _ => return Measurement::NaN,
+    };
+
+    Measurement::Test(bytes)
 }
