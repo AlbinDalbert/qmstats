@@ -4,9 +4,9 @@ The stats supported at the moment are `used memory` (and total memory), `tempret
 My goal is to expand this in the future and add more usful information.
 
 ## Usage
-To add this crate to you project, simply add the following line to your `Cargo.toml`
+To add this branch as a crate to your project, simply add the following line to your `Cargo.toml`
 
-``` qmstats = { git = "https://github.com/AlbinDalbert/qmstats.git" } ```
+``` qmstats = { git = "https://github.com/AlbinDalbert/qmstats.git", branch = "v0.2.0-beta-read-only"}```
 
 ## Example
 to be added...
