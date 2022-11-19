@@ -55,7 +55,6 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 get_temp(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
-                get_frame_rate(&wmi),
                 get_used_vram(&device),
                 get_total_vram(&device),
                 get_gpu_util(&device),
