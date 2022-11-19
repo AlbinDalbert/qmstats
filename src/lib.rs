@@ -47,7 +47,15 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
         };
         
 
-        tx.send(get_total_memory(&wmi)).unwrap();
+        match tx.send(get_total_memory(&wmi)){
+            Ok(()) => (),
+            Err(x) => eprintln!("measurment error: {x:?}"),
+        };
+
+        match tx.send(get_total_vram(&device)){
+            Ok(()) => (),
+            Err(x) => eprintln!("measurment error: {x:?}"),
+        };
 
         loop {
 
@@ -56,14 +64,16 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
                 get_used_vram(&device),
-                get_total_vram(&device),
                 get_gpu_util(&device),
                 get_gpu_temp(&device),
             ];
 
             for res in results {
                 if res != Measurement::NaN {
-                    tx.send(res);
+                    match tx.send(res) {
+                        Ok(()) => (),
+                        Err(x) => eprintln!("measurment error: {x:?}"),
+                    };
                 }
             }
             
