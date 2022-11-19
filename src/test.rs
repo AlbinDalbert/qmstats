@@ -20,7 +20,7 @@ mod tests {
         loop {
             
             let res = rx.recv().unwrap();
-
+            
             println!("{res:?}\n");
 
         }
