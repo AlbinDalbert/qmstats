@@ -1,5 +1,4 @@
 use crate::*;
-use std::sync::Once;
 
 #[cfg(test)]
 mod tests {
@@ -10,29 +9,11 @@ mod tests {
     // For this reason running all tests at once will not work. testing_all() should be used instead.
 
     #[test]
-    fn measurement_thread() {
-        
-        let (tx, rx) = mpsc::channel::<Measurement>();
-        let sleep_dur = Duration::new(1, 0);
-
-        init_measurement_thread(tx, sleep_dur, false);
-
-        loop {
-            
-            let res = rx.recv().unwrap();
-            
-            println!("{res:?}\n");
-
-        }
-    }
-
-    #[test]
     fn establish_wmi_connection() {
 
-        
         let handle = thread::spawn(|| {
         
-            match init_wmi_connection(false) {
+            match init_wmi_connection() {
                 Ok(_) => assert!(true),
                 Err(_) => assert!(false),
             };
@@ -48,11 +29,9 @@ mod tests {
     #[test]
     fn check_temp() {
 
-        
         let handle = thread::spawn(|| {
             
-            
-            let wmi = match init_wmi_connection(false) {
+            let wmi = match init_wmi_connection() {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };
@@ -69,18 +48,15 @@ mod tests {
     #[test]
     fn check_cpu_util() {
 
-        
         let handle = thread::spawn(|| {
             
-            
-            let wmi = match init_wmi_connection(false) {
+            let wmi = match init_wmi_connection() {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };
             
             get_cpu_util(&wmi);
 
-            
         });
         match handle.join() {
             Ok(_) => assert!(true),
@@ -91,17 +67,14 @@ mod tests {
     #[test]
     fn check_available_memory() {
 
-        
         let handle = thread::spawn(|| {
             
-            
-            let wmi = match init_wmi_connection(false) {
+            let wmi = match init_wmi_connection() {
                 Ok(wmi) => wmi,
                 Err(_) => panic!("WMI failed"),
             };
             
             get_available_memory(&wmi);
-            
             
         });
         match handle.join() {

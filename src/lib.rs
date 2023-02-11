@@ -27,11 +27,11 @@ pub enum Measurement {
 // or if we are going to assume that a connection is already established. The reason for this is because 
 // many engines and framework already establish a connection and thus we might need to assume.
 
-pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, assume: bool){
+pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
 
-    thread::Builder::new().name("WMI Measurement Thread".to_string()).spawn(move || {
+    match thread::Builder::new().name("WMI Measurement Thread".to_string()).spawn(move || {
 
-        let wmi: WMIConnection = match init_wmi_connection(assume) {
+        let wmi: WMIConnection = match init_wmi_connection() {
             Ok(wmi) => wmi,
             Err(_) => panic!("WMI failed"),
         };
@@ -46,7 +46,6 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
             Err(_) => panic!("device broke"),
         };
         
-
         match tx.send(get_total_memory(&wmi)){
             Ok(()) => (),
             Err(x) => eprintln!("measurment error: {x:?}"),
@@ -77,11 +76,13 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration, ass
                 }
             }
             
-
             thread::sleep(sleep_dur);
         }
 
-    }).unwrap();
+    }) {
+        Ok(_) => panic!("ok?"),
+        Err(e) => panic!("Thread failed: {}", e),
+    };
 
 }
 
@@ -134,15 +135,19 @@ pub fn get_gpu_temp(device: &Device) -> Measurement {
 // 'assume' decides if we are going to assume a wmi connection has already been made,
 // or if we are gonna create a new one.
 
-
-pub fn init_wmi_connection(assume: bool) -> Result<WMIConnection, anyhow::Error>{
+pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
     unsafe {
-        let com_lib: COMLibrary;
-        if assume {
-            com_lib = COMLibrary::assume_initialized();
-        } else {
-            com_lib = COMLibrary::new().unwrap();
-        }
+        // let com_lib: COMLibrary;
+        let com_lib = match COMLibrary::new() {
+            Ok(x) => x,
+            Err(_) => COMLibrary::assume_initialized(),
+        };
+
+        // if assume {
+        //     com_lib = COMLibrary::assume_initialized();
+        // } else {
+        //     com_lib = COMLibrary::new().unwrap();
+        // }
 
         let wmi_con = WMIConnection::new(com_lib.into())?;
 
@@ -165,9 +170,8 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
         _ => return Measurement::NaN,
     };
 
-    let mut kelvin: f64 = 0.0;
-    match data.get("Temperature") {
-        Some(Variant::UI4(val)) => kelvin = *val as f64,
+    let kelvin = match data.get("Temperature") {
+        Some(Variant::UI4(val)) => *val as f64,
         _ => return Measurement::NaN,
     };
     
@@ -188,9 +192,8 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
         _ => return Measurement::NaN,
     };
 
-    let mut percent: f64 = 0.0;
-    match data.get("LoadPercentage") {
-        Some(Variant::UI2(val)) => percent = *val as f64,
+    let percent = match data.get("LoadPercentage") {
+        Some(Variant::UI2(val)) => *val as f64,
         _ => return Measurement::NaN,
     };
     
@@ -212,9 +215,8 @@ pub fn get_available_memory(wmi: &WMIConnection) -> Measurement {
         _ => return Measurement::NaN,
     };
 
-    let mut bytes: f64 = 0.0; 
-    match data.get("AvailableBytes") {
-        Some(Variant::UI8(val)) => bytes = *val as f64,
+    let bytes = match data.get("AvailableBytes") {
+        Some(Variant::UI8(val)) => *val as f64,
         _ => return Measurement::NaN,
     };
 
@@ -237,11 +239,9 @@ pub fn get_total_memory(wmi: &WMIConnection) -> Measurement {
         Some(x) => x,
         _ => return Measurement::NaN,
     };
-
-    let mut bytes: f64 = 0.0;
     
-    match data.get("TotalPhysicalMemory") {
-        Some(Variant::UI8(val)) => bytes = *val as f64,
+    let bytes = match data.get("TotalPhysicalMemory") {
+        Some(Variant::UI8(val)) => *val as f64,
         _ => return Measurement::NaN,
     };
 
@@ -265,10 +265,8 @@ pub fn get_network_connection(wmi: &WMIConnection) -> Measurement {
         _ => return Measurement::NaN,
     };
 
-    let mut status: String = "0.0".to_string();
-
-    match data.get("Status") {
-        Some(Variant::String(val)) => status = val.to_string(),
+    let status = match data.get("Status") {
+        Some(Variant::String(val)) => val.to_string(),
         _ => return Measurement::NaN,
     };
 
@@ -289,10 +287,8 @@ pub fn get_frame_rate(wmi: &WMIConnection) -> Measurement {
         _ => return Measurement::NaN,
     };
 
-    let mut fr: f64 = 0.0;
-
-    match data.get("CurrentRefreshRate") {
-        Some(Variant::UI4(val)) => fr = *val as f64,
+    let fr = match data.get("CurrentRefreshRate") {
+        Some(Variant::UI4(val)) => *val as f64,
         _ => return Measurement::NaN,
     };
 

@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.66"
-nvml-wrapper = "0.8.0"
-wmi = "0.11.3"
+nvml-wrapper = "0.9.0"
+wmi = "0.11.4"
 
 [profile.release]
 opt-level = 3     # Optimize for size.
