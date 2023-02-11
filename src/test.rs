@@ -1,9 +1,7 @@
-use crate::*;
 
 #[cfg(test)]
 mod tests {
-    use std::sync::mpsc;
-    use super::*;
+    use crate::*;
 
     // executing init_wmi_connection() multiple times on the same thread causes the program to crash.
     // For this reason running all tests at once will not work. testing_all() should be used instead.

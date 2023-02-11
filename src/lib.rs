@@ -80,7 +80,7 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
         }
 
     }) {
-        Ok(_) => panic!("ok?"),
+        Ok(_) => (),
         Err(e) => panic!("Thread failed: {}", e),
     };
 
@@ -295,6 +295,7 @@ pub fn get_frame_rate(wmi: &WMIConnection) -> Measurement {
     Measurement::FrameRate(fr)
 }
 
+#[allow(non_snake_case)]
 pub fn KiB_to_GiB(kib: f64) -> f64{
     kib / (1024.0 * 1024.0)
 }
