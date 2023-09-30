@@ -137,19 +137,12 @@ pub fn get_gpu_temp(device: &Device) -> Measurement {
 
 pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
     unsafe {
-        // let com_lib: COMLibrary;
         let com_lib = match COMLibrary::new() {
             Ok(x) => x,
             Err(_) => COMLibrary::assume_initialized(),
         };
 
-        // if assume {
-        //     com_lib = COMLibrary::assume_initialized();
-        // } else {
-        //     com_lib = COMLibrary::new().unwrap();
-        // }
-
-        let wmi_con = WMIConnection::new(com_lib.into())?;
+        let wmi_con: WMIConnection = WMIConnection::new(com_lib.into())?;
 
         Ok(wmi_con)
     }
@@ -159,45 +152,51 @@ pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
 // return 'Measurement::NaN' on error
 pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 
-    let results: Vec<HashMap<String, Variant>> = wmi
+    let results: Vec<HashMap<String, Variant>> = match wmi
     .raw_query(
         "SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
-    )
-    .unwrap();
-
-    let data = match results.get(0) {
-        Some(x) => x,
-        _ => return Measurement::NaN,
+    ) {
+        Ok(x) => x,
+        Err(_) => return Measurement::NaN,
     };
 
-    let kelvin = match data.get("Temperature") {
-        Some(Variant::UI4(val)) => *val as f64,
-        _ => return Measurement::NaN,
-    };
-    
-    Measurement::Temperature(kelvin - 273.0)
+    let mut temp_total = 0.0;
+    let mut count = 0.0;
+
+    for hash in &results {
+        temp_total += match hash.get("Tempereture") {
+            Some(Variant::UI4(val)) => *val as f64 - 273.0,
+            _ => continue,
+        };
+        count+=1.0;
+    }
+    return Measurement::Temperature(temp_total/count);
 }
 
 // returns cpu utilization
 // return 'Measurement::NaN' on error
 pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
-    let results: Vec<HashMap<String, Variant>> = wmi
+    let results: Vec<HashMap<String, Variant>> = match wmi
     .raw_query(
         "SELECT LoadPercentage FROM Win32_Processor",
-    )
-    .unwrap();
-
-    let data = match results.get(0) {
-        Some(x) => x,
-        _ => return Measurement::NaN,
+    ) {
+        Ok(x) => x,
+        Err(_) => return Measurement::NaN,
     };
 
-    let percent = match data.get("LoadPercentage") {
-        Some(Variant::UI2(val)) => *val as f64,
-        _ => return Measurement::NaN,
-    };
-    
-    Measurement::CpuUtil(percent)
+    let mut util_total = 0.0;
+    let mut count = 0.0;
+
+    for hash in results {
+        util_total += match hash.get("LoadPercentage") {
+            Some(Variant::UI2(val)) => *val as f64,
+            _ => continue,
+        };
+        count+=1.0;
+    }
+
+    return Measurement::CpuUtil(util_total/count);
+
 }
 
 // get available memory (ram) returns the volume in bytes
