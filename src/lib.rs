@@ -159,23 +159,18 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
         Ok(x) => x,
         Err(_) => return Measurement::NaN,
     };
-
-    let mut temp_total = 0.0;
-    let mut count = 0.0;
-
+    let mut res_temp = 0.0;
     for hash in &results {
         let temp = match hash.get("Temperature") {
             Some(Variant::UI4(val)) => *val as f64 - 273.0,
             _ => continue,
         };
-        println!("{count}: {temp}");
-        if temp > 0.0 {
-            temp_total += temp;
-            count+=1.0;
+        if temp > res_temp {
+            res_temp = temp;
         }
     }
-    println!("return {temp_total}/{count}={0}",temp_total/count);
-    return Measurement::Temperature(temp_total/count);
+    // println!("return {temp_total}/{count}={0}",temp_total/count);
+    return Measurement::Temperature(res_temp);
 }
 
 // returns cpu utilization
@@ -201,7 +196,6 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
     }
 
     return Measurement::CpuUtil(util_total/count);
-
 }
 
 // get available memory (ram) returns the volume in bytes
@@ -298,6 +292,8 @@ pub fn get_frame_rate(wmi: &WMIConnection) -> Measurement {
 
     Measurement::FrameRate(fr)
 }
+
+
 
 #[allow(non_snake_case)]
 pub fn KiB_to_GiB(kib: f64) -> f64{
