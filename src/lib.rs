@@ -154,7 +154,7 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = match wmi
     .raw_query(
-        "SELECT * FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
+        "SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
     ) {
         Ok(x) => x,
         Err(_) => return Measurement::NaN,
@@ -168,13 +168,11 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
             Some(Variant::UI4(val)) => *val as f64 - 273.0,
             _ => continue,
         };
-        let name = match hash.get("Name") {
-            Some(Variant::UI4(val)) => *val as f64 - 273.0,
-            _ => continue,
-        };
-        println!("{name}: {temp}");
-        temp_total += temp;
-        count+=1.0;
+        println!("{count}: {temp}");
+        if temp > 0.0 {
+            temp_total += temp;
+            count+=1.0;
+        }
     }
     println!("return {temp_total}/{count}={0}",temp_total/count);
     return Measurement::Temperature(temp_total/count);
