@@ -1,6 +1,6 @@
 [package]
 name = "qmstats"
-version = "0.5.0"
+version = "0.5.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 nvml-wrapper = "0.9.0"
-wmi = "0.11.4"
+wmi = "0.13.1"
 
 [profile.release]
 opt-level = 3     # Optimize for size.

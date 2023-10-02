@@ -164,7 +164,7 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
     let mut count = 0.0;
 
     for hash in &results {
-        temp_total += match hash.get("Tempereture") {
+        temp_total += match hash.get("Temperature") {
             Some(Variant::UI4(val)) => *val as f64 - 273.0,
             _ => continue,
         };
