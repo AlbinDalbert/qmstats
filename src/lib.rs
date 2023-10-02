@@ -168,7 +168,7 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
             Some(Variant::UI4(val)) => *val as f64 - 273.0,
             _ => continue,
         };
-        println!("{count}: temp");
+        println!("{count}: {temp}");
         temp_total += temp;
         count+=1.0;
     }
