@@ -34,7 +34,7 @@ mod tests {
                 Err(_) => panic!("WMI failed"),
             };
             
-            get_temp(&wmi);
+            assert!(get_temp(&wmi) != Measurement::NaN);
 
         });
         match handle.join() {
@@ -79,6 +79,17 @@ mod tests {
             Ok(_) => assert!(true),
             Err(_) => assert!(false)
         };
+    }
+
+    #[test]
+    fn stress_test() {
+        for _ in 0..10 {
+            establish_wmi_connection();
+            check_temp();
+            check_cpu_util();
+            check_available_memory();
+        }
+        assert!(true);
     }
 
 }
