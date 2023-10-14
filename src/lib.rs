@@ -1,9 +1,16 @@
+use std::ffi::CString;
+use std::mem::size_of;
 use std::{collections::HashMap, thread, time::Duration, sync::mpsc::Sender};
 use std::result::Result::Ok;
 use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use wmi::{WMIConnection, COMLibrary,Variant};
-use anyhow::{self};
+use anyhow::*;
 use nvml_wrapper::*;
+use winapi::um::psapi::{EnumProcesses};
+use winapi::um::handleapi::{CloseHandle};
+use winapi::um::processthreadsapi::{OpenProcess};
+use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+
 mod test;
 
 #[derive(Debug, PartialEq)]
@@ -19,6 +26,12 @@ pub enum Measurement {
     GpuUtil(u32),
     GpuTemp(u32),
     NaN,
+}
+
+pub struct Application {
+    name: CString,
+    windoe_name: CString,
+    id: CString,
 }
 
 // initialize the measurement thread. This creates a new thread that runs in the background and 
@@ -194,8 +207,12 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
         };
         count+=1.0;
     }
+    let load = 0.0;
+    if count > 0.0 {
+        let load = util_total/count;
+    }
 
-    return Measurement::CpuUtil(util_total/count);
+    return Measurement::CpuUtil(load);
 }
 
 // get available memory (ram) returns the volume in bytes
@@ -298,4 +315,27 @@ pub fn get_frame_rate(wmi: &WMIConnection) -> Measurement {
 #[allow(non_snake_case)]
 pub fn KiB_to_GiB(kib: f64) -> f64{
     kib / (1024.0 * 1024.0)
+}
+
+
+// ----- WIM API ----- //
+
+pub fn get_apps_running(wmi: &WMIConnection) -> Result<Vec<Application>, anyhow::Error> {
+    let res = vec![];
+
+        // Create an array to store the list of process IDs.
+    let mut a_processes: [u32; 1024] = [0; 1024];
+    let mut cb_needed: u32 = 0;
+
+    unsafe {
+        if EnumProcesses(a_processes.as_mut_ptr(), (size_of::<u32>() * 1024) as u32, &mut cb_needed) == 0 {
+            println!("Failed to enumerate processes.");
+            return Err(anyhow!("failed to get processes"));
+        }
+    }
+
+    // Calculate how many process identifiers were returned.
+    let c_processes = cb_needed / size_of::<u32>() as u32;
+
+    return Ok(res);
 }

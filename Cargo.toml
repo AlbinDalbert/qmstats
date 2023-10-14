@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 nvml-wrapper = "0.9.0"
+winapi = { version = "*", features = ["psapi","handleapi","processthreadsapi"] }
 wmi = "0.13.1"
 
 [profile.release]
