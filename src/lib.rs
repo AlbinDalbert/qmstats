@@ -6,16 +6,13 @@ use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use wmi::{WMIConnection, COMLibrary,Variant};
 use anyhow::*;
 use nvml_wrapper::*;
-use winapi::um::psapi::{EnumProcesses};
-use winapi::um::handleapi::{CloseHandle};
-use winapi::um::processthreadsapi::{OpenProcess};
-use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use winapi::um::psapi::EnumProcesses;
 
 mod test;
 
 #[derive(Debug, PartialEq)]
 pub enum Measurement {
-    Temperature(f64), 
+    Temperature(i32), 
     Memory(f64),
     TotalMemory(f64),
     CpuUtil(f64),
@@ -172,17 +169,16 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
         Ok(x) => x,
         Err(_) => return Measurement::NaN,
     };
-    let mut res_temp = 0.0;
+    let mut res_temp: i32 = 0;
     for hash in &results {
         let temp = match hash.get("Temperature") {
-            Some(Variant::UI4(val)) => *val as f64 - 273.0,
+            Some(Variant::UI4(val)) => *val as i32 - 273,
             _ => continue,
         };
         if temp > res_temp {
             res_temp = temp;
         }
     }
-    // println!("return {temp_total}/{count}={0}",temp_total/count);
     return Measurement::Temperature(res_temp);
 }
 
@@ -207,11 +203,10 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
         };
         count+=1.0;
     }
-    let load = 0.0;
+    let mut load = 0.0;
     if count > 0.0 {
-        let load = util_total/count;
+        load = util_total/count;
     }
-
     return Measurement::CpuUtil(load);
 }
 
@@ -320,7 +315,7 @@ pub fn KiB_to_GiB(kib: f64) -> f64{
 
 // ----- WIM API ----- //
 
-pub fn get_apps_running(wmi: &WMIConnection) -> Result<Vec<Application>, anyhow::Error> {
+pub fn get_apps_running(_wmi: &WMIConnection) -> Result<Vec<Application>, anyhow::Error> {
     let res = vec![];
 
         // Create an array to store the list of process IDs.
@@ -335,7 +330,7 @@ pub fn get_apps_running(wmi: &WMIConnection) -> Result<Vec<Application>, anyhow:
     }
 
     // Calculate how many process identifiers were returned.
-    let c_processes = cb_needed / size_of::<u32>() as u32;
+    let _c_processes = cb_needed / size_of::<u32>() as u32;
 
     return Ok(res);
 }
