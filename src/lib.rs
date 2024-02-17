@@ -189,7 +189,7 @@ pub fn get_cpu_temp(wmi: &WMIConnection) -> Measurement {
         res_temp = tot_temp/count;
     }
 
-    Measurement::AvgTemperatureTemperature(res_temp)
+    Measurement::AvgTemperature(res_temp)
 }
 
 // get the temperature of the machine, returns in Celsius.
