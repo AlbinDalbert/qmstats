@@ -13,6 +13,7 @@ mod test;
 #[derive(Debug, PartialEq)]
 pub enum Measurement {
     Temperature(i32), 
+    AvgTemperature(i32), 
     Memory(f64),
     TotalMemory(f64),
     CpuUtil(f64),
@@ -188,7 +189,7 @@ pub fn get_cpu_temp(wmi: &WMIConnection) -> Measurement {
         res_temp = tot_temp/count;
     }
 
-    Measurement::Temperature(res_temp)
+    Measurement::AvgTemperatureTemperature(res_temp)
 }
 
 // get the temperature of the machine, returns in Celsius.
