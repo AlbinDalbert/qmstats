@@ -69,7 +69,8 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
         loop {
 
             let results: Vec<Measurement> = vec![
-                get_temp(&wmi),
+                get_cpu_temp(&wmi),
+                get_cpu_temp_max(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
                 get_used_vram(&device),
@@ -160,7 +161,39 @@ pub fn init_wmi_connection() -> Result<WMIConnection, anyhow::Error>{
 
 // get the temperature of the machine, returns in Celsius.
 // return 'Measurement::NaN' on error
-pub fn get_temp(wmi: &WMIConnection) -> Measurement {
+pub fn get_cpu_temp(wmi: &WMIConnection) -> Measurement {
+
+    let results: Vec<HashMap<String, Variant>> = match wmi
+    .raw_query(
+        "SELECT Temperature FROM Win32_PerfFormattedData_Counters_ThermalZoneInformation",
+    ) {
+        Ok(x) => x,
+        Err(_) => return Measurement::NaN,
+    };
+    let mut count = 0;
+    let mut tot_temp: i32 = 0;
+    let mut res_temp: i32 = 0;
+    for hash in &results {
+        let temp = match hash.get("Temperature") {
+            Some(Variant::UI4(val)) => *val as i32 - 273,
+            _ => continue,
+        };
+        if temp > 0 {
+            tot_temp += temp;
+            count+=1;
+        }
+    }
+
+    if count > 0 {
+        res_temp = tot_temp/count;
+    }
+
+    Measurement::Temperature(res_temp)
+}
+
+// get the temperature of the machine, returns in Celsius.
+// return 'Measurement::NaN' on error
+pub fn get_cpu_temp_max(wmi: &WMIConnection) -> Measurement {
 
     let results: Vec<HashMap<String, Variant>> = match wmi
     .raw_query(
@@ -179,7 +212,7 @@ pub fn get_temp(wmi: &WMIConnection) -> Measurement {
             res_temp = temp;
         }
     }
-    return Measurement::Temperature(res_temp);
+    Measurement::Temperature(res_temp)
 }
 
 // returns cpu utilization
@@ -194,20 +227,20 @@ pub fn get_cpu_util(wmi: &WMIConnection) -> Measurement {
     };
 
     let mut util_total = 0.0;
-    let mut count = 0.0;
+    let mut count = 0;
 
     for hash in results {
         util_total += match hash.get("LoadPercentage") {
             Some(Variant::UI2(val)) => *val as f64,
             _ => continue,
         };
-        count+=1.0;
+        count+=1;
     }
-    let mut load = 0.0;
-    if count > 0.0 {
-        load = util_total/count;
+    let mut load = 1.0;
+    if count > 0 {
+        load = util_total/count as f64;
     }
-    return Measurement::CpuUtil(load);
+    Measurement::CpuUtil(load)
 }
 
 // get available memory (ram) returns the volume in bytes

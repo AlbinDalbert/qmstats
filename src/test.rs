@@ -34,7 +34,7 @@ mod tests {
                 Err(_) => panic!("WMI failed"),
             };
             
-            assert!(get_temp(&wmi) != Measurement::NaN);
+            assert!(get_cpu_temp(&wmi) != Measurement::NaN);
 
         });
         match handle.join() {
