@@ -47,14 +47,11 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
             Err(_) => panic!("WMI failed"),
         };
 
-        let nvml = match Nvml::init() {
-            Ok(x) => x,
-            Err(_) => panic!("nvml broke"),
-        };
-    
-        let device = match nvml.device_by_index(0) {
-            Ok(x) => x,
-            Err(_) => panic!("device broke"),
+        let nvml_result = Nvml::init();
+
+        let device: Option<Device> = match nvml_result {
+            Ok(ref nvml) => nvml.device_by_index(0).ok(),
+            Err(_) => None,
         };
         
         match tx.send(get_total_memory(&wmi)){
@@ -62,7 +59,7 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
             Err(x) => eprintln!("measurment error: {x:?}"),
         };
 
-        match tx.send(get_total_vram(&device)){
+        match tx.send(get_total_vram(device.as_ref())){
             Ok(()) => (),
             Err(x) => eprintln!("measurment error: {x:?}"),
         };
@@ -74,9 +71,9 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
                 get_cpu_temp_max(&wmi),
                 get_available_memory(&wmi),
                 get_cpu_util(&wmi),
-                get_used_vram(&device),
-                get_gpu_util(&device),
-                get_gpu_temp(&device),
+                get_used_vram(device.as_ref()),
+                get_gpu_util(device.as_ref()),
+                get_gpu_temp(device.as_ref()),
             ];
 
             for res in results {
@@ -100,10 +97,13 @@ pub fn init_measurement_thread(tx: Sender<Measurement>, sleep_dur: Duration) {
 
 // ------------- GPU DATA ------------------- //
 
-pub fn get_used_vram(device: &Device) -> Measurement {
-    let data = match device.memory_info(){
-        Ok(x) => x,
-        Err(_) => return Measurement::NaN,
+pub fn get_used_vram(device: Option<&Device>) -> Measurement {
+    let data = match device {
+        Some(dev) => match dev.memory_info() {
+            Ok(x) => x,
+            Err(_) => return Measurement::NaN,
+        },
+        None => return Measurement::NaN,
     };
 
     let used = data.used;
@@ -111,10 +111,14 @@ pub fn get_used_vram(device: &Device) -> Measurement {
     Measurement::VramUsed(used / 1024)
 }
 
-pub fn get_total_vram(device: &Device) -> Measurement {
-    let data = match device.memory_info(){
-        Ok(x) => x,
-        Err(_) => return Measurement::NaN,
+pub fn get_total_vram(device: Option<&Device>) -> Measurement {
+
+    let data = match device {
+        Some(dev) => match dev.memory_info() {
+            Ok(x) => x,
+            Err(_) => return Measurement::NaN,
+        },
+        None => return Measurement::NaN,
     };
 
     let used = data.total;
@@ -122,20 +126,26 @@ pub fn get_total_vram(device: &Device) -> Measurement {
     Measurement::VramTotal(used / 1024)
 }
 
-pub fn get_gpu_util(device: &Device) -> Measurement {
-    let data = match device.utilization_rates(){
-        Ok(x) => x,
-        Err(_) => return Measurement::NaN,
+pub fn get_gpu_util(device: Option<&Device>) -> Measurement {
+    let data = match device {
+        Some(dev) => match dev.utilization_rates() {
+            Ok(x) => x,
+            Err(_) => return Measurement::NaN,
+        },
+        None => return Measurement::NaN,
     };
 
     Measurement::GpuUtil(data.gpu)
 }
 
-pub fn get_gpu_temp(device: &Device) -> Measurement {
+pub fn get_gpu_temp(device: Option<&Device>) -> Measurement {
     let sensor = TemperatureSensor::Gpu;
-    let data = match device.temperature(sensor){
-        Ok(x) => x,
-        Err(_) => return Measurement::NaN,
+    let data = match device {
+        Some(dev) => match dev.temperature(sensor) {
+            Ok(x) => x,
+            Err(_) => return Measurement::NaN,
+        },
+        None => return Measurement::NaN,
     };
 
     Measurement::GpuTemp(data)
